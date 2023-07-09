@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th = "http://www.thymeleaf.org"
+      xmlns:layout = "http://www.ultraq.net.nz/thymeleaf/layout" layout:decorate="layout.html">
+    <div layout:fragment="content">
+        <h1 class="text-center">HELLO BARBER PANEL</h1>
+
+        <input type="hidden" id = "userId" th:value="${userId}">
+        <input type="hidden" id = "orderId">
+
+        <div class="row mt-3">
+            <div class="col-12">
+                <table class="table table-striped">
+                    <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>CLIENT</th>
+                        <th>DATE</th>
+                        <th>APPROVE</th>
+                        <th style="width: 5%">DETAILS</th>
+                    </tr>
+                    </thead>
+                    <tbody id="orderListBody">
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="modal fade" id="detailsModal" data-bs-backdrop="static"
+             data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h1 class="modal-title fs-5" id="staticBackdropLabel">Order Details</h1>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="clientId">
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <label>CLIENT : </label>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <input readonly type="text" class="form-control" id="clientNameDetails">
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <label>CLIENT EMAIL : </label>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <input type="email" readonly class="form-control" id="clientEmailDetails"></input>
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <label>DATE : </label>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <input readonly type="datetime-local" class="form-control" id="dateDetails">
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <label>APPROVAL : </label>
+                            </div>
+                        </div>
+                        <div class="row mt-2">
+                            <div class="col-12">
+                                <span id="approvalDetails"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-danger" onclick="deleteOrder()">DELETE</button>
+                        <button type="button" class="btn btn-primary" onclick="approveOrder()">APPROVE</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                    <script type="text/javascript">
+
+                        function approveOrder() {
+
+                            const httpRequest = new XMLHttpRequest();
+                            httpRequest.open("PUT", "/order", true);
+                            httpRequest.setRequestHeader("Content-Type", "application/json");
+
+                            let orderId = document.getElementById("orderId").value;
+                            let barberId = document.getElementById("userId").value;
+                            let date = document.getElementById("dateDetails").value;
+                            let clientId = document.getElementById("clientId").value;
+
+                            httpRequest.onreadystatechange = function () {
+                                if (httpRequest.readyState == XMLHttpRequest.DONE && httpRequest.status == 200) {
+                                    detailsModal.hide();
+                                    loadOrders();
+                                }
+                            };
+
+                            let body = {
+                                "id": orderId,
+                                "barber": {
+                                    "id": barberId
+                                },
+                                "client": {
+                                    "id": clientId
+                                },
+                                "approved": true,
+                                "date": date
+                            };
+
+                            body = JSON.stringify(body);
+                            httpRequest.send(body);
+
+                        }
+                        function deleteOrder(){
+
+                            let approve = confirm("Are you sure?");
+
+                            if(approve){
+
+                                let orderId = document.getElementById("orderId");
+
+                                const httpRequest = new XMLHttpRequest();
+                                httpRequest.open("DELETE", "/order/"+orderId.value, true);
+                                httpRequest.setRequestHeader("Content-Type", "application/json");
+
+                                httpRequest.onreadystatechange = function () {
+                                    if (httpRequest.readyState == XMLHttpRequest.DONE && httpRequest.status == 200) {
+                                        detailsModal.hide();
+                                        loadOrders();
+                                    }
+                                };
+
+                                httpRequest.send();
+                            }
+                        }
+                    </script>
+                </div>
+            </div>
+        </div>
+
+        <script type="text/javascript">
+
+            loadOrders();
+            function loadOrders(){
+
+                const httpRequest = new XMLHttpRequest();
+                httpRequest.open("GET", "/order/barberOrderList",  true);
+                httpRequest.onreadystatechange = function (){
+                    if(httpRequest.readyState == XMLHttpRequest.DONE && httpRequest.status == 200){
+
+                        let orderList = JSON.parse(httpRequest.responseText);
+
+                        let tableContent = "";
+                        for(let i = 0; i < orderList.length; i++){
+                            tableContent+="<tr>";
+                            tableContent+="<td>"+orderList[i].id+"</td>";
+                            tableContent+="<td>"+orderList[i].client.fullName+"</td>";
+                            tableContent+="<td>"+orderList[i].date+"</td>";
+                            if(orderList[i].approved){
+                                tableContent+="<td class='text-success fw-bold'>YES</td>";}
+                            else{
+                                tableContent+="<td class='text-danger fw-bold'>NO</td>";}
+                            tableContent+="<td><button class='btn btn-primary btn-sm' " +
+                                "onclick='openOrderDetailsModal("+orderList[i].id+")'>DETAILS</button></td>";
+                            tableContent+="</tr>";
+                        }
+                        document.getElementById("orderListBody").innerHTML = tableContent;
+                    }
+                };
+                httpRequest.send();
+            }
+
+            function openOrderDetailsModal(id){
+
+                detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
+
+                const httpRequest = new XMLHttpRequest();
+                httpRequest.open("GET", "/order/"+id,  true);
+                httpRequest.onreadystatechange = function (){
+                    if(httpRequest.readyState == XMLHttpRequest.DONE && httpRequest.status == 200){
+
+                        let tableContent = "";
+
+                        let result = JSON.parse(httpRequest.responseText);
+                        clientId.value = result.client.id;
+                        clientNameDetails.value = result.client.fullName;
+                        clientEmailDetails.value = result.client.email;
+                        dateDetails.value = result.date;
+                        orderId.value = result.id;
+
+                        if(approvalDetails.value==true){
+                            tableContent+="<option value='1' class='text-success fw-bold'>YES</option>";
+                        }
+                        else{
+                            tableContent+="<option value='0' class='text-danger fw-bold'>NO</option>";}
+                        document.getElementById("approvalDetails").innerHTML = tableContent;
+
+                        detailsModal.show();
+                    }
+                };
+                httpRequest.send();
+
+            }
+        </script>
+    </div>
+</html>
