@@ -1,0 +1,29 @@
+version: '3.1'
+services:
+  backend:
+    image: 'mapeke/gentleman'
+    container_name: 'self-generated-backend-container'
+    depends_on: 
+      - mysqldb
+    environment: 
+      - SERVER_PORT=9999
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=root
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysqldb:3306/gentleman
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=none
+      - SPRING_JPA_SHOW_SQL=true
+      - LIQUIBASE_CHANGELOG=classpath:/db/changelog/db.changelog-master.xml # Liquibase changelog file
+    volumes:
+      - ./db/changelog:/liquibase/changelog # Mount Liquibase changelog file
+      - ./db/data:/liquibase/data # Mount Liquibase data files
+    ports:
+      - 8000:9999
+
+  mysqldb:
+    image: mysql
+    container_name: 'mysql-container'
+    environment: 
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=gentleman
+    ports:
+      - 2345:3306
